@@ -1,0 +1,276 @@
+<!-- popup.html with batch support, countdown timers, and sent tracking -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sora Prompt Manager</title>
+  <style>
+    body {
+      width: 400px;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      resize: vertical;
+    }
+    button {
+      padding: 8px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    .prompt-list {
+      margin-top: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .prompt-item {
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 5px;
+      border-radius: 4px;
+    }
+    .prompt-item h3 {
+      margin-top: 0;
+      margin-bottom: 5px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #333;
+    }
+    .prompt-item p {
+      margin: 5px 0;
+      font-size: 12px;
+      color: #666;
+    }
+    .prompt-item small {
+      display: block;
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+    .prompt-controls {
+      display: flex;
+      gap: 5px;
+      justify-content: flex-end;
+      margin-top: 5px;
+    }
+    .prompt-controls button {
+      padding: 3px 8px;
+      font-size: 11px;
+      margin-right: 2px;
+    }
+    .view-prompt {
+      background-color: #4caf50; /* Green */
+    }
+    .view-prompt:hover {
+      background-color: #388e3c;
+    }
+    .edit-prompt {
+      background-color: #ff9800; /* Orange */
+    }
+    .edit-prompt:hover {
+      background-color: #f57c00;
+    }
+    .send-now-prompt {
+      background-color: #2196f3; /* Blue */
+    }
+    .send-now-prompt:hover {
+      background-color: #1976d2;
+    }
+    .remove-prompt {
+      background-color: #f44336; /* Red */
+    }
+    .remove-prompt:hover {
+      background-color: #d32f2f;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+    }
+    .controls {
+      display: flex;
+      gap: 5px;
+    }
+    .tab-header {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .tab {
+      padding: 8px 15px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px 4px 0 0;
+      background-color: #f0f0f0;
+    }
+    .tab.active {
+      background-color: white;
+      border-bottom: none;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin: 5px 0;
+      font-style: italic;
+    }
+    .setting-group {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    input[type="number"] {
+      width: 60px;
+    }
+    .countdown {
+      display: inline-block;
+      margin-left: 10px;
+      padding: 2px 8px;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .countdown.warning {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    .countdown.danger {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .timers-display {
+      margin-top: 10px;
+      padding: 8px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+    }
+    .prompt-item.sent {
+      background-color: #f5f5f5;
+      border-color: #ddd;
+      opacity: 0.8;
+    }
+    .prompt-item.sent h3, 
+    .prompt-item.sent p, 
+    .prompt-item.sent small {
+      color: #777;
+    }
+    .sent-badge {
+      display: inline-block;
+      background-color: #607d8b;
+      color: white;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 6px;
+      font-weight: normal;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sora Prompt Manager</h1>
+  
+  <div class="tab-header">
+    <div class="tab active" data-tab="create">Create Prompt</div>
+    <div class="tab" data-tab="queue">Queue</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
+  
+  <div class="tab-content active" id="create-tab">
+    <div class="container">
+      <label for="prompt-input">Enter prompt for Sora:</label>
+      <textarea id="prompt-input" placeholder="Describe the video you want Sora to create..."></textarea>
+      
+      <div class="help-text">
+        You can enter multiple prompts using the format:<br>
+        <strong>1. Title</strong><br>
+        <em>"Prompt text here"</em>
+      </div>
+      
+      <div class="controls">
+        <button id="add-prompt">Add to Queue</button>
+        <button id="send-prompt">Send Now</button>
+      </div>
+      
+      <div class="status" id="status-display">
+        Status: Not connected
+      </div>
+      
+      <div class="timers-display">
+        <div>
+          Status check in: <span id="status-interval-countdown" class="countdown">10</span> seconds
+        </div>
+        <div>
+          Auto-submit in: <span id="auto-submit-countdown" class="countdown">65</span> seconds
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="tab-content" id="queue-tab">
+    <h2>Prompt Queue</h2>
+    <div class="prompt-list" id="prompt-queue">
+      <!-- Prompt items will be added here -->
+    </div>
+    <button id="clear-queue" class="remove-prompt">Clear Queue</button>
+    
+    <div class="timers-display" style="margin-top: 10px;">
+      <div>
+        Status check in: <span id="status-interval-countdown-queue" class="countdown">10</span> seconds
+      </div>
+      <div>
+        Auto-submit in: <span id="auto-submit-countdown-queue" class="countdown">65</span> seconds
+      </div>
+    </div>
+  </div>
+  
+  <div class="tab-content" id="settings-tab">
+    <h2>Settings</h2>
+    <div class="container">
+      <div class="setting-group">
+        <label for="check-interval">Check status interval (seconds):</label>
+        <input type="number" id="check-interval" min="5" max="60" value="10">
+        <span class="countdown-label">Countdown: <span id="status-interval-countdown-settings" class="countdown">10</span> s</span>
+      </div>
+      
+      <div class="setting-group">
+        <label for="auto-submit-delay">Auto-submit delay (seconds):</label>
+        <input type="number" id="auto-submit-delay" min="30" max="300" value="65">
+        <span class="countdown-label">Countdown: <span id="auto-submit-countdown-settings" class="countdown">65</span> s</span>
+        <div class="help-text">Time between submitting prompts from queue</div>
+      </div>
+      
+      <div class="setting-group">
+        <label for="auto-submit">
+          <input type="checkbox" id="auto-submit" checked>
+          Enable auto-submit
+        </label>
+        <div class="help-text">Automatically submit prompts from queue after the delay</div>
+      </div>
+      
+      <button id="save-settings">Save Settings</button>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
